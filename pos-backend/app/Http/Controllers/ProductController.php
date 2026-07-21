@@ -2,24 +2,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Exports\EmployeeExport;
 use App\Http\Requests\ProductRequest;
-use App\Models\Brand;
-use App\Models\Category;
 use App\Models\Product;
+use App\Models\Category;
+use App\Models\Brand;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\ProductExport;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\Request;
-use Nette\Utils\Json;
-use App\Exports\ProductExport;
-use Maatwebsite\Excel\Facades\Excel;
 
-class ProductController extends Controller implements hasMiddleware
+class ProductController extends Controller implements HasMiddleware
 {
-    /**
-     * Define middleware for the controller actions.
-     */
     public static function middleware(): array
     {
         return [
@@ -27,12 +22,7 @@ class ProductController extends Controller implements hasMiddleware
             new Middleware('permission:product.create', only: ['store']),
             new Middleware('permission:product.update', only: ['update']),
             new Middleware('permission:product.delete', only: ['destroy']),
-
-            new Middleware('permission:product.import', only: ['import']),
             new Middleware('permission:product.export', only: ['export']),
-
-            new Middleware('permission:product.barcode', only: ['barcode']),
-            new Middleware('permission:product.imei', only: ['imei']),
         ];
     }
 
@@ -41,128 +31,153 @@ class ProductController extends Controller implements hasMiddleware
         return Excel::download(new ProductExport, 'Product_List.xlsx');
     }
 
-    // Get list of products with filters and pagination
     public function index(Request $request)
     {
-        $query = Product::query(); //ORM Eloquent
-        if ($request->has('id')) {
-            $query->where("id", "=", $request->input("id"));
+        $query = Product::query();
+
+        if ($request->id) {
+            $query->where('id', $request->id);
         }
-        if ($request->has('category_id')) {
-            $query->where("category_id", "=", $request->input("category_id"));
+
+        if ($request->category_id) {
+            $query->where('category_id', $request->category_id);
         }
-        if ($request->has('brand_id')) {
-            $query->where("brand_id", "=", $request->input("brand_id"));
+
+        if ($request->brand_id) {
+            $query->where('brand_id', $request->brand_id);
         }
-        if ($request->has('txt_search')) {
-            $query->where("product_name", "LIKE", "%" . $request->input("txt_search") . "%");
+
+        if ($request->txt_search) {
+            $query->where('product_name', 'LIKE', "%{$request->txt_search}%");
         }
-        if ($request->has('status')) {
-            $query->where("status", "=", $request->input("status"));
+
+        if ($request->status !== null && $request->status !== '') {
+            $query->where('status', $request->status);
         }
-        // $product = $query->get(), // get list product
-        $product = $query->with(['category', 'brand'])->orderBy('id', 'desc')->get(); // Get products with related category and brand data
-        // $product = $query->with(['category', 'brand'])->paginate(); // Fetch paginated product list including category and brand data
-        // total product count
-        $total = $query->count();
+
+        $products = $query->with(['category', 'brand'])
+            ->orderBy('id', 'desc')
+            ->get();
+
         return response()->json([
-            "list" => $product,
-            "total" => $total,
+            "list" => $products,
+            "total" => $products->count(),
             "category" => Category::all(),
             "brand" => Brand::all(),
         ]);
     }
 
-    // Store a new product
-
     public function store(ProductRequest $request)
     {
         $data = $request->validated();
+        $data['status'] = (int)$data['status'];
+        $data['is_featured'] = (int)($data['is_featured'] ?? 0);
 
+        // MAIN IMAGE
         if ($request->hasFile('image')) {
-            // បង្កើត Folder products ក្នុង storage/app/public
             $data['image'] = $request->file('image')->store('products', 'public');
+        }
+
+        // GALLERY (FIXED - NO json_encode)
+        if ($request->hasFile('gallery')) {
+            $gallery = [];
+
+            foreach ($request->file('gallery') as $file) {
+                $gallery[] = $file->store('products', 'public');
+            }
+
+            $data['gallery'] = $gallery;
         }
 
         $product = Product::create($data);
+
         return response()->json([
-            "message" => "Save Product Success",
-            "data" => $product,
+            "message" => "Product created successfully",
+            "data" => $product
         ], 201);
     }
 
-    // Show a single product
-    public function show(string $id)
+    public function show($id)
     {
-        $product = Product::find($id);
+        $product = Product::with(['category', 'brand'])->find($id);
+
         if (!$product) {
-            return response()->json([
-                "message" => "Data Not Found",
-            ], 404);
+            return response()->json(["message" => "Product not found"], 404);
         }
-        return response()->json([
-            "data" => $product->load(['category', 'brand']),
-        ], 201);
+
+        return response()->json(["data" => $product]);
     }
 
-    // Update the specified resource in storage.
-
-    public function update(ProductRequest $request, string $id)
+    public function update(ProductRequest $request, $id)
     {
         $product = Product::find($id);
+
         if (!$product) {
             return response()->json([
-                "message" => "Data Not Found",
+                "message" => "Product not found"
             ], 404);
         }
+
         $data = $request->validated();
 
+        $data['status'] = (int)($data['status'] ?? $product->status);
+        $data['is_featured'] = (int)($data['is_featured'] ?? $product->is_featured);
+
         if ($request->hasFile('image')) {
+
+            // delete old image
             if ($product->image) {
                 Storage::disk('public')->delete($product->image);
             }
-            $data['image'] = $request->file('image')->store('products', 'public');
+
+            $data['image'] = $request->file('image')
+                ->store('products', 'public');
         }
-        if ($request->image_remove != "") {
-            //លុប File ចេញពី Storage
-            if ($product->image) {
-                Storage::disk('public')->delete($product->image);
+
+        // old gallery
+        $gallery = $request->old_gallery ?? [];
+
+        // upload new gallery
+        if ($request->hasFile('gallery')) {
+
+            foreach ($request->file('gallery') as $file) {
+
+                $gallery[] = $file->store('products', 'public');
             }
-            $imagePath = null;
         }
+
+        $data['gallery'] = $gallery;
 
         $product->update($data);
+
         return response()->json([
-            "data" => $product,
-            "message" => "Update Product Success",
-        ], 200);
+            "message" => "Product updated successfully",
+            "data" => $product
+        ]);
     }
 
-    // Delete a product
-
-    public function destroy(string $id)
+    public function destroy($id)
     {
-        // រកមើលផលិតផល
         $product = Product::find($id);
 
-        // បើអត់មាន ឱ្យចេញសារ Error
         if (!$product) {
-            return response()->json([
-                "message" => "Data Not Found",
-            ], 404);
+            return response()->json(["message" => "Product not found"], 404);
         }
 
-        // បើមានរូបភាព គឺលុបរូបភាពចេញពី Folder សិន
         if ($product->image) {
             Storage::disk('public')->delete($product->image);
         }
 
-        // delete data in Database
+        if ($product->gallery) {
+            foreach ($product->gallery as $img) {
+                Storage::disk('public')->delete($img);
+            }
+        }
+
         $product->delete();
 
         return response()->json([
-            "message" => "Delete Product Success",
-            "data" => $product
-        ], 200);
+            "message" => "Product deleted successfully"
+        ]);
     }
 }

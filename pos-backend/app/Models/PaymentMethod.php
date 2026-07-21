@@ -31,4 +31,10 @@ class PaymentMethod extends Model
     {
         return $this->hasMany(Employee::class, 'payment_method_id');
     }
+
+    public function order(): HasMany
+    {
+        return $this->hasMany(Order::class, 'payment_method_id');
+    }
+
 }

@@ -9,6 +9,9 @@ import ProfilePage from '../page/profile/ProfilePage';
 import ExpensePage from '../page/expenses/ExpensePage';
 import ExpenseTypePage from '../page/expenses/ExpenseTypePage';
 import CustomerTypePage from '../page/customers/CustomerTypePage';
+import SupplierPage from '../page/purchase/SupplierPage';
+import PurchasePage from '../page/purchase/PurchasePage';
+
 
 const MainLayout = lazy(() => import('../component/layout/MainLayout'));
 const Dashboard = lazy(() => import('../page/dashboard/DashboardPage'));
@@ -53,8 +56,9 @@ const AppRoute = () => {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/expense" element={<ExpensePage />} />
             <Route path="/expense_type" element={<ExpenseTypePage />} />
+            <Route path="/supplier" element={<SupplierPage />} />
+            <Route path="/purchase" element={<PurchasePage />} />
           </Route>
-
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/403" element={<Error403 />} />

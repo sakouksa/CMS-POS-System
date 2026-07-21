@@ -10,13 +10,18 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeePayrollController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseTypeController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentMethodeController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PosController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProvinceController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\PurchaseItemController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -65,6 +70,11 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('expenses', ExpenseController::class);
     // expense-types routes
     Route::apiResource('expense-types', ExpenseTypeController::class);
+    Route::apiResource('supplier', SupplierController::class);
+    Route::apiResource('purchases', PurchaseController::class);
+    Route::get('purchase-export', [PurchaseController::class, 'export']);
+    Route::apiResource('orders', OrderController::class);
+    Route::apiResource('/pos', PosController::class);
     // Province routes (public even inside auth group)
     Route::apiResource('province', ProvinceController::class)
         ->withoutMiddleware('auth:api');

@@ -29,7 +29,7 @@ class CustomerController extends Controller implements HasMiddleware
     /**
      * Get all customers with search and filter functionality
      */
-    public function index(Request $req)
+    public function infdex(Request $req)
     {
         // Eloquent ORM Query with CustomerType relationship loading
         $query = Customer::with('customerType');

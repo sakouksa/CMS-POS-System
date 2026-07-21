@@ -3,27 +3,97 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Brand;
-use App\Models\Category;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
+
 class Product extends Model
 {
+    /**
+     * Always include computed fields in API response
+     */
+    protected $appends = [
+        'final_price'
+    ];
+
     protected $fillable = [
         'category_id',
         'brand_id',
         'product_name',
+        'slug',
+        'sku',
+        'barcode',
         'description',
-        'quantity',
+        'cost_price',
         'price',
+        'discount_percent',
+        'stock_quantity',
+        'min_stock_alert',
+        'weight',
         'image',
-        'status'
+        'gallery',
+        'status',
+        'is_featured',
     ];
-    // One Product belong to one Category
-    public function category()
+
+    protected $casts = [
+        'gallery' => 'array',
+        'status' => 'integer',
+        'is_featured' => 'boolean',
+
+        'price' => 'float',
+        'cost_price' => 'float',
+        'discount_percent' => 'integer',
+
+        'stock_quantity' => 'integer',
+        'min_stock_alert' => 'integer',
+        'weight' => 'float',
+    ];
+
+    /**
+     * AUTO SLUG GENERATION
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($product) {
+            if (empty($product->slug)) {
+                $product->slug = Str::slug($product->product_name) . '-' . uniqid();
+            }
+        });
+    }
+
+    /**
+     * FINAL PRICE CALCULATION (SAFE)
+     */
+    public function getFinalPriceAttribute()
+    {
+        $discount = (int)($this->discount_percent ?? 0);
+        $price = (float)($this->price ?? 0);
+
+        if ($discount > 0) {
+            return round($price - ($price * $discount / 100), 2);
+        }
+
+        return $price;
+    }
+
+    /**
+     * RELATIONS
+     */
+    public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
-    // One Product belong to one Brand
-    public function brand(){
+
+    public function brand(): BelongsTo
+    {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
     }
 }

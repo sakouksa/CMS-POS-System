@@ -13,9 +13,15 @@ class Category extends Model
         'status',
         'parent_id',
     ];
+
     // One category has many Product
     public function products()
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function order()
+    {
+        return $this->hasMany(Order::class);
     }
 }
