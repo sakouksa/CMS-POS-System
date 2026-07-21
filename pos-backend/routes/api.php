@@ -31,6 +31,7 @@ Route::post('login', [AuthController::class, 'login']);
 
 // Protected routes (require JWT authentication)
 Route::middleware('auth:api')->group(function () {
+    Route::get('dashboard', [App\Http\Controllers\DashboardController::class, 'index']);
 
     // Get logged_in user info
     Route::get('/user', function (Request $request) {
@@ -39,6 +40,10 @@ Route::middleware('auth:api')->group(function () {
     Route::get('user', [ProfileController::class, 'index']);
     Route::post('profile/update', [ProfileController::class, 'updateProfile']);
     Route::post('profile/change-password', [ProfileController::class, 'changePassword']);
+    // User routes
+    Route::apiResource('users', \App\Http\Controllers\UserController::class);
+    // Permission routes
+    Route::apiResource('permissions', \App\Http\Controllers\PermissionController::class);
     // Role routes
     Route::apiResource('role', RoleController::class);
     Route::post('role/changeStatus/{id}', [RoleController::class, 'changeStatus']);
@@ -74,10 +79,11 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('purchases', PurchaseController::class);
     Route::get('purchase-export', [PurchaseController::class, 'export']);
     Route::apiResource('orders', OrderController::class);
-    Route::apiResource('/pos', PosController::class);
-    // Province routes (public even inside auth group)
-    Route::apiResource('province', ProvinceController::class)
-        ->withoutMiddleware('auth:api');
+    // Analytics & Reports Routes
+    Route::get('report/sales', [\App\Http\Controllers\ReportController::class, 'salesReport']);
+    Route::get('report/orders', [\App\Http\Controllers\ReportController::class, 'ordersReport']);
+    Route::get('report/purchases', [\App\Http\Controllers\ReportController::class, 'purchaseReport']);
+    Route::get('report/expenses', [\App\Http\Controllers\ReportController::class, 'expenseReport']);
 
     // Logout
     Route::post('logout', [AuthController::class, 'logout']);

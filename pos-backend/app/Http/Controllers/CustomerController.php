@@ -29,7 +29,7 @@ class CustomerController extends Controller implements HasMiddleware
     /**
      * Get all customers with search and filter functionality
      */
-    public function infdex(Request $req)
+    public function index(Request $req)
     {
         // Eloquent ORM Query with CustomerType relationship loading
         $query = Customer::with('customerType');
@@ -49,8 +49,8 @@ class CustomerController extends Controller implements HasMiddleware
             $query->where("customer_type_id", $req->input("customer_type_id"));
         }
 
+        $total = (clone $query)->count();
         $list = $query->orderBy('id', 'desc')->get();
-        $total = $query->count();
 
         return response()->json([
             'list' => $list,

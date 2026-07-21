@@ -34,3 +34,15 @@ export const isPermissionAction = (permission_name) => {
   return true; // no permission
 };
 
+export const formatPrice = (amount) => {
+  const number = Number(amount || 0);
+  return '$' + number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+export const getProductImage = (image) => {
+  if (!image) return null;
+  if (image.startsWith('http://') || image.startsWith('https://')) return image;
+  const cleanPath = image.replace(/^(storage\/|public\/)+/, '');
+  return `${config.image_path}${cleanPath}`;
+};
+

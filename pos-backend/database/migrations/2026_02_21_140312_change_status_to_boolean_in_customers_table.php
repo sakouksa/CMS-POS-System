@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // ១. ឆែកមើលថាមាន Column status ឬអត់ បើមានត្រូវលុបវាចោលសិន
-        if (Schema::hasColumn('customers', 'status')) {
+        if (Schema::hasTable('customers')) {
+            // ១. ឆែកមើលថាមាន Column status ឬអត់ បើមានត្រូវលុបវាចោលសិន
+            if (Schema::hasColumn('customers', 'status')) {
+                Schema::table('customers', function (Blueprint $table) {
+                    $table->dropColumn('status');
+                });
+            }
+
+            // ២. បង្កើត Column status ថ្មីជាប្រភេទ boolean
             Schema::table('customers', function (Blueprint $table) {
-                $table->dropColumn('status');
+                $table->boolean('status')->default(1)->after('address');
             });
         }
-
-        // ២. បង្កើត Column status ថ្មីជាប្រភេទ boolean
-        Schema::table('customers', function (Blueprint $table) {
-            $table->boolean('status')->default(1)->after('address');
-        });
     }
 
     /**

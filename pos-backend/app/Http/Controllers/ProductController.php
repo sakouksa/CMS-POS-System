@@ -70,7 +70,10 @@ class ProductController extends Controller implements HasMiddleware
     public function store(ProductRequest $request)
     {
         $data = $request->validated();
-        $data['status'] = (int)$data['status'];
+        $data['quantity'] = (int)($data['quantity'] ?? $data['stock_quantity'] ?? 0);
+        unset($data['stock_quantity'], $data['image_remove'], $data['old_gallery']);
+
+        $data['status'] = (int)($data['status'] ?? 1);
         $data['is_featured'] = (int)($data['is_featured'] ?? 0);
 
         // MAIN IMAGE
@@ -119,6 +122,8 @@ class ProductController extends Controller implements HasMiddleware
         }
 
         $data = $request->validated();
+        $data['quantity'] = (int)($data['quantity'] ?? $data['stock_quantity'] ?? $product->quantity ?? 0);
+        unset($data['stock_quantity'], $data['image_remove'], $data['old_gallery']);
 
         $data['status'] = (int)($data['status'] ?? $product->status);
         $data['is_featured'] = (int)($data['is_featured'] ?? $product->is_featured);

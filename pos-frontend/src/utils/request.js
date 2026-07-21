@@ -19,7 +19,6 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
       url: config.base_url + url,
       method: method, //"get","post" ,"put","delete"
       data: data,
-      //So that axios knows what type of data to accept (json or blob)
       responseType: option.responseType || "json",
       headers: {
         ...headers,
@@ -31,10 +30,8 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
       return res.data;
     })
     .catch(async (error) => {
-      console.log(error);
       const response = error.response;
       if (response) {
-
         let data = response.data;
 
         if (data instanceof Blob) {
@@ -42,36 +39,39 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
           try {
             data = JSON.parse(text);
           } catch (e) {
-            data = {
-              message: text || "Unknown Error"
-            };
+            data = { message: text || "Unknown Error" };
           }
         }
 
         const status = response.status;
         let errors = {
-          message: data?.message,
+          message: data?.message || "An error occurred",
         };
-        if (status == 500) {
-          const errMsg = "500 : មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ សូមព្យាយាមម្តងទៀត!";
-          throw new Error(errMsg);
+
+        if (status === 401) {
+          profileStore.getState().logout();
+          window.location.href = '/login';
+          return {
+            error: true,
+            status: 401,
+            errors: { message: "Session expired. Please log in again." }
+          };
         }
 
-        // if (status == 500) {
-        //   errors.message =
-        //     "500 : មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ សូមព្យាយាមម្តងទៀត!";
-        //   return {
-        //     error: true,
-        //     status: status,
-        //     errors: errors,
-        //   };
-        // }
+        if (status === 500) {
+          return {
+            error: true,
+            status: 500,
+            message: data?.message || "500 : មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ!",
+            errors: { message: data?.message || "500 : មានបញ្ហាបច្ចេកទេសក្នុងប្រព័ន្ធ!" }
+          };
+        }
 
         if (data.errors) {
-          Object.keys(data.errors).map((key) => {
+          Object.keys(data.errors).forEach((key) => {
             errors[key] = {
               validateStatus: "error",
-              help: data.errors[key][0], //get error message
+              help: data.errors[key][0],
               hasFeedback: true,
             };
           });
@@ -79,6 +79,7 @@ export const request = (url = "", method = "", data = {}, option = {}) => {
         return {
           error: true,
           status: status,
+          message: data?.message || "Validation Error",
           errors: errors,
         };
       }

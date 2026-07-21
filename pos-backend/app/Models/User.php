@@ -40,10 +40,16 @@ class User extends Authenticatable implements JWTSubject
         'last_login_at'
     ];
 
-    //relationship in profile one-to-one
+    // relationship in profile one-to-one
     public function profile()
     {
         return $this->hasOne(Profile::class);
+    }
+
+    // relationship with roles
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'user_roles', 'user_id', 'role_id');
     }
 
     /**

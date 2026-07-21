@@ -24,6 +24,16 @@ SELECT 48 AS role_id, id
 FROM permissions;
 user_id = 1 | permission[12,33,4,5,5,2]
 
+INSERT INTO role_permissions (role_id, permission_id, created_at, updated_at)
+SELECT 1, p.id, NOW(), NOW()
+FROM permissions p
+WHERE NOT EXISTS (
+SELECT 1
+FROM role_permissions rp
+WHERE rp.role_id = 1
+AND rp.permission_id = p.id
+);
+
 SELECT
 	p.*
     FROM permissions p

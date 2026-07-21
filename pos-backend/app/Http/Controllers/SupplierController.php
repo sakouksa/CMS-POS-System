@@ -50,8 +50,8 @@ class SupplierController extends Controller implements HasMiddleware
             $query->where("is_active", $req->input("is_active"));
         }
 
+        $total = (clone $query)->count();
         $list = $query->orderBy('id', 'desc')->get();
-        $total = $query->count();
 
         return response()->json([
             'list' => $list,

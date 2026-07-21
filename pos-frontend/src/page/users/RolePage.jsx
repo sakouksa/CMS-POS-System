@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
   Button,
   Form,
@@ -9,330 +9,450 @@ import {
   Space,
   Table,
   Tag,
-} from "antd";
-import { CgInsertBeforeO } from "react-icons/cg";
-import Item from "antd/es/list/Item";
-//Import icon
-import { CiCloudOn, CiEdit } from "react-icons/ci";
-import { request } from "../../utils/request";
-import { AiOutlineUserAdd } from "react-icons/ai";
-import { RiSave3Fill } from "react-icons/ri";
-import { SearchOutlined } from "@ant-design/icons";
-// import dayJs
+  Card,
+  Checkbox,
+  Row,
+  Col,
+  Tooltip,
+  Divider,
+  Badge
+} from 'antd';
+import {
+  SafetyCertificateOutlined,
+  SearchOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ExclamationCircleFilled,
+  LockOutlined,
+  CheckCircleOutlined
+} from '@ant-design/icons';
+import { request } from '../../utils/request';
+import { dateClient } from '../../utils/helper';
+import MainPage from '../../component/common/PageLoader';
 
-import { dateClient } from "../../utils/helper";
-import { MdDelete } from "react-icons/md";
-import { ExclamationCircleFilled } from "@ant-design/icons";
-import { BiSolidEditAlt } from "react-icons/bi";
-import MainPage from "../../component/common/PageLoader";
-
-function RolePage() {
+const RolePage = () => {
   const [formRef] = Form.useForm();
   const [state, setState] = useState({
     list: [],
+    allPermissions: [],
     total: 0,
     loading: false,
     open: false,
-    validate: {},
+    permissionModalOpen: false,
+    selectedRole: null,
+    editingRole: null
   });
-  // ការចាប់តម្លៃទុកក្នុង State ដើម្បីអោយ User វាយអក្សរ ឬរើសស្ថានភាព (Status)
+
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [filter, setFilter] = useState({
-    text_search: "",
-    status: "",
+    text_search: '',
+    status: ''
   });
 
   useEffect(() => {
     getlist();
   }, []);
-  const [validate, setValidate] = useState({});
-  // posts Function
+
   const getlist = async () => {
-    setState((pre) => ({ ...pre, loading: true }));
-    // console.log("rolepage : ", res);
-    // រៀបចំ Query Params
-    let query_param = "?page=1";
-    if (filter.text_search !== null && filter.text_search !== "") {
-      query_param += "&text_search=" + filter.text_search;
+    setState(pre => ({ ...pre, loading: true }));
+    let query_param = '?page=1';
+    if (filter.text_search) {
+      query_param += '&text_search=' + encodeURIComponent(filter.text_search);
     }
-    if (filter.status !== null && filter.status !== "") {
-      query_param += "&status=" + filter.status;
+    if (filter.status !== null && filter.status !== '') {
+      query_param += '&status=' + filter.status;
     }
-    //localhost:8001/api/role?page1&text_search=admin&status=0 //query parameter
-    // ទាញទិន្នន័យ (ហៅ request មុននឹងប្រើ res)
-    const res = await request("role" + query_param, "get", {});
-    console.log("rolepage:", res);
+
+    const res = await request('role' + query_param, 'get');
     if (res && !res.errors) {
-      setState((pre) => ({
+      setState(pre => ({
         ...pre,
-        total: res.total,
+        total: res.list?.length || 0,
         list: res.list || [],
-        loading: false,
+        allPermissions: res.permissions || [],
+        loading: false
       }));
     } else {
-      setState((pre) => ({ ...pre, loading: false }));
-      //ចាប់យក Error ពីរ backend
-      if (res.errors?.message) {
-        message.error(res.errors?.message);
-      }
+      setState(pre => ({ ...pre, loading: false }));
+      message.error(res?.message || 'Failed to fetch roles');
     }
   };
 
-  // handle Open Modal
-  const handleOpenModal = () => {
-    setState((pre) => ({ ...pre, open: true }));
+  const handleOpenModal = (role = null) => {
+    setState(pre => ({ ...pre, open: true, editingRole: role }));
+    if (role) {
+      formRef.setFieldsValue({
+        id: role.id,
+        name: role.name,
+        code: role.code,
+        description: role.description,
+        status: role.status ?? 1
+      });
+    } else {
+      formRef.resetFields();
+      formRef.setFieldsValue({ status: 1 });
+    }
   };
 
-  // handle Close Modal
   const handleCloseModal = () => {
-    setState((pre) => ({ ...pre, open: false }));
+    setState(pre => ({ ...pre, open: false, editingRole: null }));
     formRef.resetFields();
-    setValidate({});
   };
 
-  // onFinish function new role form
-  const onFinish = async (item) => {
-    let data = {
-      name: item.name,
-      code: item.code,
-      description: item.description,
-      status: item.status,
-    };
+  const handleOpenPermissionModal = role => {
+    const rolePermissionIds = (role.permissions || []).map(p => p.id);
+    setSelectedPermissions(rolePermissionIds);
+    setState(pre => ({
+      ...pre,
+      permissionModalOpen: true,
+      selectedRole: role
+    }));
+  };
 
-    let url = "role";
-    let method = "post";
+  const handleClosePermissionModal = () => {
+    setState(pre => ({ ...pre, permissionModalOpen: false, selectedRole: null }));
+    setSelectedPermissions([]);
+  };
 
-    if (formRef.getFieldValue("id") != undefined) {
-      url += "/" + formRef.getFieldValue("id");
-      method = "put";
-    }
+  const onFinish = async values => {
+    const isEdit = !!formRef.getFieldValue('id');
+    const url = isEdit ? `role/${formRef.getFieldValue('id')}` : 'role';
+    const method = isEdit ? 'put' : 'post';
 
-    const res = await request(url, method, data);
+    const res = await request(url, method, values);
     if (res && !res.errors) {
-      message.success(res.message || "ជោគជ័យ!");
+      message.success(res.message || 'Saved successfully!');
       handleCloseModal();
       getlist();
     } else {
-      setState((p) => ({
-        ...p,
-        loading: false,
-      }));
-      setValidate(res.errors);
-      message.error(res?.message || "ប្រតិបត្តិការបរាជ័យ!");
+      message.error(res?.message || 'Operation failed!');
     }
   };
 
-  // handle Delete role
-  const handleDelete = async (data) => {
+  const handleSavePermissions = async () => {
+    if (!state.selectedRole) return;
+    const url = `role/${state.selectedRole.id}`;
+    const payload = {
+      name: state.selectedRole.name,
+      code: state.selectedRole.code,
+      description: state.selectedRole.description,
+      status: state.selectedRole.status,
+      permissions: selectedPermissions
+    };
+
+    const res = await request(url, 'put', payload);
+    if (res && !res.errors) {
+      message.success('Role permissions updated successfully!');
+      handleClosePermissionModal();
+      getlist();
+    } else {
+      message.error(res?.message || 'Failed to update permissions!');
+    }
+  };
+
+  const handleDelete = data => {
     Modal.confirm({
-      title: "បញ្ជាក់ការលុប",
-      icon: <ExclamationCircleFilled style={{ color: "#ff4d4f" }} />,
-      content: (
-        <div style={{ paddingTop: 10 }}>តើអ្នកពិតជាចង់លុបមែនដែរឬទេ?</div>
-      ),
-      okText: "លុបចេញ",
-      okType: "danger",
-      cancelText: "បោះបង់",
+      title: 'Confirm Delete Role',
+      icon: <ExclamationCircleFilled style={{ color: '#ff4d4f' }} />,
+      content: `Are you sure you want to delete role "${data.name}"?`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
       centered: true,
-      okButtonProps: { style: { borderRadius: "10px" } },
-      cancelButtonProps: { style: { borderRadius: "10px" } },
       onOk: async () => {
-        const res = await request(`role/${data.id}`, "delete", {});
-        if (res && !res.error) {
-          message.success(res.message || "លុបបានជោគជ័យ!");
+        const res = await request(`role/${data.id}`, 'delete');
+        if (res && !res.errors) {
+          message.success(res.message || 'Deleted successfully!');
           getlist();
         } else {
-          message.error(res?.message || "មានបញ្ហាក្នុងការលុប!");
+          message.error(res?.message || 'Failed to delete role!');
         }
-      },
+      }
     });
   };
 
-  //handle Edit role
-  const handleEdit = async (data) => {
-    formRef.setFieldsValue({
-      ...data,
-      id: data.id,
-    });
-    setState((p) => ({ ...p, open: true }));
-  };
-  const handleFilter = () => {
-    getlist();
-  };
+  // Group permissions by module
+  const groupedPermissions = state.allPermissions.reduce((acc, item) => {
+    const group = item.group || 'General';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {});
+
+  const columns = [
+    {
+      title: 'Role Name',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name, record) => (
+        <div>
+          <div className='font-bold text-slate-800 text-sm'>{name}</div>
+          <div className='text-xs text-slate-400 font-mono'>{record.code}</div>
+        </div>
+      )
+    },
+    {
+      title: 'Description',
+      dataIndex: 'description',
+      key: 'description',
+      render: desc => desc || <span className='text-slate-300'>No description</span>
+    },
+    {
+      title: 'Assigned Permissions',
+      key: 'permissions',
+      render: record => {
+        const count = record.permissions ? record.permissions.length : 0;
+        return (
+          <Badge
+            count={`${count} Permissions`}
+            style={{ backgroundColor: count > 0 ? '#52c41a' : '#d9d9d9', color: '#fff' }}
+          />
+        );
+      }
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      align: 'center',
+      render: status => (
+        <Tag color={status ? 'green' : 'red'} className='rounded-full px-3'>
+          {status ? 'Active' : 'Inactive'}
+        </Tag>
+      )
+    },
+    {
+      title: 'Created Date',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      render: date => dateClient(date)
+    },
+    {
+      title: 'Actions',
+      key: 'action',
+      align: 'center',
+      render: record => (
+        <Space>
+          <Tooltip title='Manage Permissions'>
+            <Button
+              type='primary'
+              ghost
+              size='small'
+              icon={<SafetyCertificateOutlined />}
+              onClick={() => handleOpenPermissionModal(record)}
+            >
+              Permissions
+            </Button>
+          </Tooltip>
+          <Tooltip title='Edit Role'>
+            <Button
+              type='text'
+              icon={<EditOutlined className='text-blue-600 text-base' />}
+              onClick={() => handleOpenModal(record)}
+            />
+          </Tooltip>
+          <Tooltip title='Delete Role'>
+            <Button
+              type='text'
+              danger
+              icon={<DeleteOutlined className='text-base' />}
+              onClick={() => handleDelete(record)}
+            />
+          </Tooltip>
+        </Space>
+      )
+    }
+  ];
 
   return (
-    <MainPage loading={state.loading}>
-      <div>
-        <div className="main-page-header">
-          <Space>
-            <div>តួនាទីសរុប: {state.list.length}</div>
-            <Input.Search
-              allowClear
-              onChange={(e) =>
-                setFilter((p) => ({ ...p, text_search: e.target.value }))
-              }
-              placeholder="ស្វែងរកតួនាទី..."
-            />
-            <Select
-              allowClear={true}
-              placeholder="ជ្រើសរើសស្ថានភាព"
-              style={{ width: 150 }}
-              onChange={(value) => setFilter((p) => ({ ...p, status: value }))}
-              options={[
-                {
-                  label: "ទាំងអស់",
-                  value: null,
-                },
-                {
-                  label: "សកម្ម",
-                  value: 1,
-                },
-                {
-                  label: "អសកម្ម",
-                  value: 0,
-                },
-              ]}
-            />
-            <Button
-              type="primary"
-              onClick={handleFilter}
-              icon={<SearchOutlined />} // បន្ថែម Icon ស្វែងរក
-            >
-              ស្វែងរក
-            </Button>
-          </Space>
+    <div className='space-y-6'>
+        {/* Header Title */}
+        <div className='bg-gradient-to-r from-purple-900 to-indigo-900 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4'>
+          <div>
+            <h1 className='text-2xl font-bold tracking-tight text-white m-0 flex items-center gap-3'>
+              <SafetyCertificateOutlined className='text-purple-400' /> Role & Access Management
+            </h1>
+            <p className='text-slate-300 text-sm mt-1 mb-0'>
+              Define security roles, configure granular permissions, and control user module access.
+            </p>
+          </div>
           <Button
-            type="primary"
-            onClick={handleOpenModal}
-            icon={<AiOutlineUserAdd />}
+            type='primary'
+            size='large'
+            icon={<PlusOutlined />}
+            onClick={() => handleOpenModal()}
+            className='bg-purple-600 hover:bg-purple-500 border-none rounded-xl font-semibold shadow-lg shadow-purple-600/30'
           >
-            បង្កើតថ្មី
+            Create New Role
           </Button>
         </div>
-        {/* Modal Form Create update */}
+
+        {/* Filter Card */}
+        <Card className='rounded-xl shadow-sm border-slate-100'>
+          <Space wrap className='w-full justify-between'>
+            <Space wrap>
+              <Input
+                placeholder='Search role name...'
+                prefix={<SearchOutlined className='text-slate-400' />}
+                allowClear
+                value={filter.text_search}
+                onChange={e => setFilter(p => ({ ...p, text_search: e.target.value }))}
+                onPressEnter={getlist}
+                className='w-64'
+              />
+              <Select
+                placeholder='Status'
+                className='w-36'
+                allowClear
+                value={filter.status}
+                onChange={val => setFilter(p => ({ ...p, status: val }))}
+                options={[
+                  { label: 'Active', value: 1 },
+                  { label: 'Inactive', value: 0 }
+                ]}
+              />
+              <Button type='primary' onClick={getlist} icon={<SearchOutlined />}>
+                Filter
+              </Button>
+            </Space>
+            <div className='text-slate-500 text-sm font-semibold'>
+              Total Roles: <span className='text-indigo-600'>{state.list.length}</span>
+            </div>
+          </Space>
+        </Card>
+
+        {/* Role Table */}
+        <Card className='rounded-xl shadow-sm border-slate-100 overflow-hidden'>
+          <Table dataSource={state.list} columns={columns} rowKey='id' loading={state.loading} pagination={false} />
+        </Card>
+
+        {/* Create/Edit Role Modal */}
         <Modal
           title={
-            formRef.getFieldValue("id") ? "កែប្រែតួនាទី" : "បង្កើតតួនាទីថ្មី"
+            <span className='font-bold text-lg text-slate-800'>
+              {state.editingRole ? 'Edit Role' : 'Create New Role'}
+            </span>
           }
           open={state.open}
           onCancel={handleCloseModal}
-          centered
-          width={600}
           footer={null}
+          centered
+          width={500}
         >
-          <Form layout="vertical" onFinish={onFinish} form={formRef}>
-            <Form.Item
-              label="ឈ្មោះតួនាទី"
-              name={"name"}
-              {...validate.name}
-              rules={[{ required: true, message: "សូមបញ្ចូលឈ្មោះតួនាទី!" }]}
-            >
-              <Input placeholder="បញ្ចូលឈ្មោះតួនាទី" />
+          <Form layout='vertical' onFinish={onFinish} form={formRef} className='mt-4'>
+            <Form.Item name='id' hidden>
+              <Input />
             </Form.Item>
             <Form.Item
-              label="កូដ"
-              name={"code"}
-              {...validate.code}
-              rules={[{ required: true, message: "សូមបញ្ចូលកូដ!" }]}
+              label='Role Name'
+              name='name'
+              rules={[{ required: true, message: 'Please input role name!' }]}
             >
-              <Input placeholder="បញ្ចូលកូដតួនាទី" />
+              <Input placeholder='e.g. Store Manager' />
             </Form.Item>
-            <Form.Item label="ការពិពណ៌នា" name={"description"}>
-              <Input.TextArea placeholder="ព័ត៌មានបន្ថែម..." />
+
+            <Form.Item
+              label='Role Code'
+              name='code'
+              rules={[{ required: true, message: 'Please input role code!' }]}
+            >
+              <Input placeholder='e.g. store_manager' />
             </Form.Item>
-            <Form.Item label="ស្ថានភាព" name={"status"}>
+
+            <Form.Item label='Description' name='description'>
+              <Input.TextArea rows={3} placeholder='Role responsibilities description...' />
+            </Form.Item>
+
+            <Form.Item label='Status' name='status' initialValue={1}>
               <Select
-                placeholder="ជ្រើសរើសស្ថានភាព"
                 options={[
-                  { label: "សកម្ម", value: 1 },
-                  { label: "អសកម្ម", value: 0 },
+                  { label: 'Active', value: 1 },
+                  { label: 'Inactive', value: 0 }
                 ]}
               />
             </Form.Item>
-            <Form.Item style={{ textAlign: "right", marginBottom: 0 }}>
-              <Space>
-                <Button onClick={handleCloseModal}>បោះបង់</Button>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  icon={
-                    formRef.getFieldValue("id") ? (
-                      <BiSolidEditAlt />
-                    ) : (
-                      <RiSave3Fill />
-                    )
-                  }
-                >
-                  {formRef.getFieldValue("id")
-                    ? "ធ្វើបច្ចុប្បន្នភាព"
-                    : "រក្សាទុក"}
-                </Button>
-              </Space>
-            </Form.Item>
+
+            <div className='flex justify-end gap-3 mt-4 border-t pt-4'>
+              <Button onClick={handleCloseModal}>Cancel</Button>
+              <Button type='primary' htmlType='submit' className='bg-purple-600 border-none'>
+                Save Role
+              </Button>
+            </div>
           </Form>
         </Modal>
-        {/* End Modal Form Create update */}
-        {/* Data table */}
-        <Table
-          dataSource={state.list}
-          // loading={state.loading}
-          scroll={{ x: 800 }}
-          columns={[
-            {
-              key: "name",
-              title: "ឈ្មោះ",
-              dataIndex: "name",
-            },
-            {
-              key: "code",
-              title: "កូដ",
-              dataIndex: "code",
-            },
-            {
-              key: "description",
-              title: "ការពិពណ៌នា",
-              dataIndex: "description",
-            },
-            {
-              key: "status",
-              title: "ស្ថានភាព",
-              dataIndex: "status",
-              render: (value) =>
-                value ? (
-                  <Tag color="green">សកម្ម</Tag>
-                ) : (
-                  <Tag color="red">អសកម្ម</Tag>
-                ),
-            },
-            {
-              key: "created_at",
-              title: "ថ្ងៃបង្កើត",
-              dataIndex: "created_at",
-              render: (value) => dateClient(value),
-            },
-            {
-              key: "action",
-              title: "សកម្មភាព",
-              align: "center",
-              render: (data) => (
-                <Space>
-                  <Button
-                    type="text"
-                    onClick={() => handleEdit(data)}
-                    icon={<CiEdit style={{ fontSize: 18, color: "#004EBC" }} />}
-                  />
-                  <Button
-                    type="text"
-                    danger
-                    onClick={() => handleDelete(data)}
-                    icon={<MdDelete style={{ fontSize: 18 }} />}
-                  />
-                </Space>
-              ),
-            },
-          ]}
-        />
+
+        {/* Role-Permission Matrix Modal */}
+        <Modal
+          title={
+            <div className='flex items-center gap-2 text-slate-800 font-bold text-lg'>
+              <LockOutlined className='text-purple-600' />
+              <span>Permission Settings for Role:</span>
+              <Tag color='purple' className='text-sm px-3 py-1 font-bold'>
+                {state.selectedRole?.name}
+              </Tag>
+            </div>
+          }
+          open={state.permissionModalOpen}
+          onCancel={handleClosePermissionModal}
+          width={800}
+          centered
+          onOk={handleSavePermissions}
+          okText='Save Permissions'
+          okButtonProps={{ className: 'bg-purple-600 border-none' }}
+        >
+          <div className='max-h-[60vh] overflow-y-auto pr-2 mt-4 space-y-6'>
+            {Object.keys(groupedPermissions).map(group => {
+              const perms = groupedPermissions[group];
+              const allGroupChecked = perms.every(p => selectedPermissions.includes(p.id));
+
+              return (
+                <div key={group} className='bg-slate-50 p-4 rounded-xl border border-slate-200'>
+                  <div className='flex justify-between items-center mb-3 pb-2 border-b border-slate-200'>
+                    <h3 className='font-bold text-slate-700 m-0 uppercase tracking-wider text-xs flex items-center gap-2'>
+                      <CheckCircleOutlined className='text-indigo-500' /> {group} Module
+                    </h3>
+                    <Checkbox
+                      checked={allGroupChecked}
+                      onChange={e => {
+                        const groupIds = perms.map(p => p.id);
+                        if (e.target.checked) {
+                          setSelectedPermissions(prev => Array.from(new Set([...prev, ...groupIds])));
+                        } else {
+                          setSelectedPermissions(prev => prev.filter(id => !groupIds.includes(id)));
+                        }
+                      }}
+                      className='text-xs font-semibold text-slate-500'
+                    >
+                      Select All {group}
+                    </Checkbox>
+                  </div>
+                  <Row gutter={[12, 12]}>
+                    {perms.map(p => (
+                      <Col span={12} md={8} key={p.id}>
+                        <Checkbox
+                          checked={selectedPermissions.includes(p.id)}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setSelectedPermissions(prev => [...prev, p.id]);
+                            } else {
+                              setSelectedPermissions(prev => prev.filter(id => id !== p.id));
+                            }
+                          }}
+                          className='text-xs text-slate-700'
+                        >
+                          {p.name}
+                        </Checkbox>
+                      </Col>
+                    ))}
+                  </Row>
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
       </div>
-    </MainPage>
   );
-}
+};
+
 export default RolePage;

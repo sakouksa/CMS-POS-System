@@ -135,7 +135,9 @@ class BrandController extends Controller implements hasMiddleware
     public function destroy(string $id)
     {
         $brand = Brand::find($id);
-        // Delete the if it exists
+        if (!$brand) {
+            return response()->json(['message' => 'Brand not found'], 404);
+        }
         if ($brand->image) {
             Storage::disk('public')->delete($brand->image);
         }

@@ -30,12 +30,13 @@ class ProductRequest extends FormRequest
             'price' => 'required|numeric',
             'discount_percent' => 'nullable|integer|min:0|max:100',
 
-            'stock_quantity' => 'required|integer',
+            'stock_quantity' => 'nullable|integer',
+            'quantity' => 'nullable|integer',
             'min_stock_alert' => 'nullable|integer',
 
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'gallery' => 'nullable|array',
-            'gallery.*' => 'image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => $this->hasFile('image') ? 'image|mimes:jpeg,png,jpg,webp|max:5120' : 'nullable',
+            'gallery' => 'nullable',
+            'gallery.*' => 'nullable',
 
             'status' => 'required|in:0,1',
             'is_featured' => 'nullable|in:0,1,true,false',

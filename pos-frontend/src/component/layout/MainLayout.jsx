@@ -39,7 +39,7 @@ import {
 
 import { RiCustomerService2Fill, RiUserSharedLine } from 'react-icons/ri'
 import { BiCategoryAlt, BiSolidUserBadge } from 'react-icons/bi'
-import { AiOutlineShoppingCart, AiOutlineUsergroupAdd } from 'react-icons/ai'
+import { AiOutlineShoppingCart, AiOutlineTranslation, AiOutlineUsergroupAdd } from 'react-icons/ai'
 import { BsCashStack } from 'react-icons/bs'
 import { CiCloudOn } from 'react-icons/ci'
 import { TbScanPosition } from 'react-icons/tb'
@@ -61,8 +61,8 @@ const items_menu_left_tmp = [
   getItem('Orders', '/orders', <AiOutlineShoppingCart />),
 
   getItem('Report', 'report', <MdDashboardCustomize />, [
-    getItem('Report Sales', '/report/top_sales', <BsCashStack />),
-    getItem('Order', '/order', <FileTextOutlined />),
+    getItem('Report Sales', '/report/sales', <BsCashStack />),
+    getItem('Order', '/report/orders', <FileTextOutlined />),
     getItem('Purchase', '/report/purchase', <AiOutlineShoppingCart />),
     getItem('Expense', '/report/expense', <MdOutlinePayments />)
   ]),
@@ -74,7 +74,6 @@ const items_menu_left_tmp = [
 
   getItem('Inventory', 'inventory', <MdInventory />, [
     getItem('Products', '/product', <MdFormatListBulleted />),
-    getItem('Product Cards', '/product_card', <MdApps />),
     getItem('Categories', '/category', <BiCategoryAlt />),
     getItem('Brands', '/brand', <MdOutlineBrandingWatermark />)
   ]),
@@ -103,7 +102,6 @@ const items_menu_left_tmp = [
   ]),
 
   getItem('Settings', 'settings', <SettingOutlined />, [
-    getItem('Language', '/lang', <MdOutlineLanguage />),
     getItem('Province/City', '/province', <MdOutlineLocationCity />),
     getItem('Currency', '/currency', <BsCashStack />),
     getItem('Payment Methods', '/payment_method', <MdOutlinePayments />)

@@ -64,7 +64,7 @@ class OrderController extends Controller
                 }
 
                 // Stock validation
-                if ($product->stock_quantity < $item['quantity']) {
+                if ($product->quantity < $item['quantity']) {
                     throw new \Exception(
                         "Not enough stock for product ID {$product->id}"
                     );
@@ -80,7 +80,7 @@ class OrderController extends Controller
                 ]);
 
                 // Deduct stock
-                $product->decrement('stock_quantity', $item['quantity']);
+                $product->decrement('quantity', $item['quantity']);
             }
 
             return response()->json([
@@ -119,7 +119,7 @@ class OrderController extends Controller
                     ->first();
 
                 if ($product) {
-                    $product->increment('stock_quantity', $item->quantity);
+                    $product->increment('quantity', $item->quantity);
                 }
             }
 

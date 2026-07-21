@@ -11,6 +11,7 @@ import ExpenseTypePage from '../page/expenses/ExpenseTypePage';
 import CustomerTypePage from '../page/customers/CustomerTypePage';
 import SupplierPage from '../page/purchase/SupplierPage';
 import PurchasePage from '../page/purchase/PurchasePage';
+import OrderPage from '../page/order/OrderPage';
 
 
 const MainLayout = lazy(() => import('../component/layout/MainLayout'));
@@ -25,6 +26,13 @@ const BrandPage = lazy(() => import('../page/inventory/BrandPage'));
 const ProvincePage = lazy(() => import('../page/settings/ProvincePage'));
 const PaymentMethodPage = lazy(() => import('../page/settings/PaymentMethodPage'));
 const RolePage = lazy(() => import('../page/users/RolePage'));
+const UserListPage = lazy(() => import('../page/users/UserListPage'));
+const PermissionPage = lazy(() => import('../page/users/PermissionPage'));
+
+const SalesReportPage = lazy(() => import('../page/reports/TopSalesPage'));
+const OrderReportPage = lazy(() => import('../page/reports/OrderReportPage'));
+const PurchaseReportPage = lazy(() => import('../page/reports/PurchaseReportPage'));
+const ExpenseReportPage = lazy(() => import('../page/reports/ExpenseReportPage'));
 
 const LoginPage = lazy(() => import('../page/auth/LoginPage'));
 const RegisterPage = lazy(() => import('../page/auth/RegisterPage'));
@@ -58,6 +66,14 @@ const AppRoute = () => {
             <Route path="/expense_type" element={<ExpenseTypePage />} />
             <Route path="/supplier" element={<SupplierPage />} />
             <Route path="/purchase" element={<PurchasePage />} />
+            <Route path="/orders" element={<OrderPage />} />
+            <Route path="/list" element={<UserListPage />} />
+            <Route path="/role" element={<RolePage />} />
+            <Route path="/permission" element={<PermissionPage />} />
+            <Route path="/report/sales" element={<SalesReportPage />} />
+            <Route path="/report/orders" element={<OrderReportPage />} />
+            <Route path="/report/purchase" element={<PurchaseReportPage />} />
+            <Route path="/report/expense" element={<ExpenseReportPage />} />
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

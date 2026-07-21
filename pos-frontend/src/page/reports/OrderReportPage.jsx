@@ -10,14 +10,16 @@ import {
   Typography,
   Space,
   Select,
+  Input,
   Spin
 } from 'antd';
 import {
-  ShoppingOutlined,
-  DollarOutlined,
+  FileTextOutlined,
   SearchOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ShoppingOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { request } from '../../utils/request';
@@ -26,35 +28,38 @@ import { formatPrice, dateClient } from '../../utils/helper';
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
-const PurchaseReportPage = () => {
+const OrderReportPage = () => {
   const [loading, setLoading] = useState(false);
   const [dates, setDates] = useState([
     dayjs().subtract(30, 'day'),
     dayjs()
   ]);
-  const [paymentStatus, setPaymentStatus] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
 
   const [data, setData] = useState({
     summary: {
-      total_purchases: 0,
-      total_cost: 0,
-      total_paid: 0,
-      total_due: 0
+      total_count: 0,
+      completed_count: 0,
+      pending_count: 0,
+      cancelled_count: 0,
+      total_amount: 0
     },
     list: []
   });
 
   useEffect(() => {
-    fetchPurchaseReport();
+    fetchOrdersReport();
   }, []);
 
-  const fetchPurchaseReport = async () => {
+  const fetchOrdersReport = async () => {
     setLoading(true);
     const fromDate = dates[0] ? dates[0].format('YYYY-MM-DD') : '';
     const toDate = dates[1] ? dates[1].format('YYYY-MM-DD') : '';
 
-    let query = `report/purchases?from_date=${fromDate}&to_date=${toDate}`;
-    if (paymentStatus) query += `&payment_status=${paymentStatus}`;
+    let query = `report/orders?from_date=${fromDate}&to_date=${toDate}`;
+    if (statusFilter) query += `&order_status=${statusFilter}`;
+    if (search) query += `&txt_search=${encodeURIComponent(search)}`;
 
     const res = await request(query, 'get');
     if (res && !res.errors) {
@@ -68,43 +73,54 @@ const PurchaseReportPage = () => {
 
   const statCards = [
     {
-      title: 'TOTAL PURCHASE COST',
-      value: formatPrice(data.summary.total_cost),
-      icon: <DollarOutlined className='text-xl text-indigo-600' />,
+      title: 'TOTAL ORDERS',
+      value: data.summary.total_count,
+      icon: <ShoppingOutlined className='text-xl text-indigo-600' />,
       bgColor: '#e0e7ff'
     },
     {
-      title: 'TOTAL PAID',
-      value: formatPrice(data.summary.total_paid),
+      title: 'COMPLETED',
+      value: data.summary.completed_count,
       icon: <CheckCircleOutlined className='text-xl text-emerald-600' />,
       bgColor: '#ecfdf5'
     },
     {
-      title: 'TOTAL DUE (SUPPLIER DEBT)',
-      value: formatPrice(data.summary.total_due),
-      icon: <ExclamationCircleOutlined className='text-xl text-red-600' />,
-      bgColor: '#fee2e2'
+      title: 'PENDING',
+      value: data.summary.pending_count,
+      icon: <ClockCircleOutlined className='text-xl text-amber-600' />,
+      bgColor: '#fef3c7'
     },
     {
-      title: 'PURCHASE INVOICES',
-      value: data.summary.total_purchases,
-      icon: <ShoppingOutlined className='text-xl text-purple-600' />,
-      bgColor: '#f3e8ff'
+      title: 'CANCELLED',
+      value: data.summary.cancelled_count,
+      icon: <CloseCircleOutlined className='text-xl text-red-600' />,
+      bgColor: '#fee2e2'
     }
   ];
 
   const columns = [
     {
-      title: 'Purchase No',
-      dataIndex: 'purchase_no',
-      key: 'purchase_no',
+      title: 'Order No',
+      dataIndex: 'order_no',
+      key: 'order_no',
       render: text => <span className='font-mono font-bold text-slate-800'>{text}</span>
     },
     {
-      title: 'Supplier',
-      dataIndex: ['supplier', 'name'],
-      key: 'supplier',
-      render: name => <span className='font-semibold text-slate-700'>{name || 'General Supplier'}</span>
+      title: 'Customer',
+      key: 'customer',
+      render: record => (
+        <span>
+          {record.customer
+            ? `${record.customer.first_name || ''} ${record.customer.last_name || ''}`.trim() || record.customer.name
+            : 'General Customer'}
+        </span>
+      )
+    },
+    {
+      title: 'Payment Method',
+      dataIndex: ['payment_method', 'name'],
+      key: 'payment_method',
+      render: text => text || <Tag color='blue'>Cash</Tag>
     },
     {
       title: 'Grand Total',
@@ -114,32 +130,14 @@ const PurchaseReportPage = () => {
       render: val => <span className='font-extrabold text-slate-800'>{formatPrice(val)}</span>
     },
     {
-      title: 'Paid Amount',
-      dataIndex: 'paid_amount',
-      key: 'paid_amount',
-      align: 'right',
-      render: val => <span className='font-semibold text-emerald-600'>{formatPrice(val)}</span>
-    },
-    {
-      title: 'Due Amount',
-      dataIndex: 'due_amount',
-      key: 'due_amount',
-      align: 'right',
-      render: val => (
-        <span className={`font-semibold ${val > 0 ? 'text-red-500' : 'text-slate-400'}`}>
-          {formatPrice(val)}
-        </span>
-      )
-    },
-    {
-      title: 'Payment Status',
-      dataIndex: 'payment_status',
-      key: 'payment_status',
+      title: 'Status',
+      dataIndex: 'order_status',
+      key: 'order_status',
       align: 'center',
       render: status => {
         let color = 'green';
-        if (status === 'partial') color = 'orange';
-        if (status === 'due') color = 'red';
+        if (status === 'pending') color = 'orange';
+        if (status === 'cancelled') color = 'red';
         return (
           <Tag color={color} className='uppercase font-semibold rounded-full px-3 py-0.5'>
             {status}
@@ -149,8 +147,8 @@ const PurchaseReportPage = () => {
     },
     {
       title: 'Date',
-      dataIndex: 'purchase_date',
-      key: 'purchase_date',
+      dataIndex: 'created_at',
+      key: 'created_at',
       render: date => dateClient(date)
     }
   ];
@@ -158,13 +156,13 @@ const PurchaseReportPage = () => {
   return (
     <div className='space-y-6'>
       {/* Header Banner */}
-      <div className='bg-gradient-to-r from-cyan-900 to-indigo-900 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4'>
+      <div className='bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4'>
         <div>
           <h1 className='text-2xl font-bold tracking-tight text-white m-0 flex items-center gap-3'>
-            <ShoppingOutlined className='text-cyan-400' /> Purchase & Inventory Restock Report
+            <FileTextOutlined className='text-blue-400' /> Order History & Status Report
           </h1>
-          <p className='text-cyan-100 text-sm mt-1 mb-0'>
-            Monitor stock purchase expenses, supplier payments, outstanding debts, and restock logs.
+          <p className='text-blue-100 text-sm mt-1 mb-0'>
+            Track store order logs, customer transactions, order status breakdowns, and date ranges.
           </p>
         </div>
       </div>
@@ -199,23 +197,33 @@ const PurchaseReportPage = () => {
         {/* Filter Controls */}
         <Card className='rounded-xl shadow-sm border-slate-100 mb-6'>
           <Row gutter={[16, 16]} align='middle'>
+            <Col xs={24} sm={8} md={8}>
+              <Input
+                placeholder='Search Order No...'
+                prefix={<SearchOutlined className='text-slate-400' />}
+                allowClear
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                onPressEnter={fetchOrdersReport}
+              />
+            </Col>
             <Col xs={12} sm={6} md={6}>
               <Select
-                placeholder='Payment Status'
+                placeholder='Order Status'
                 className='w-full'
                 allowClear
-                value={paymentStatus}
-                onChange={val => setPaymentStatus(val)}
+                value={statusFilter}
+                onChange={val => setStatusFilter(val)}
                 options={[
-                  { label: 'Paid', value: 'paid' },
-                  { label: 'Partial', value: 'partial' },
-                  { label: 'Due (Unpaid)', value: 'due' }
+                  { label: 'Completed', value: 'completed' },
+                  { label: 'Pending', value: 'pending' },
+                  { label: 'Cancelled', value: 'cancelled' }
                 ]}
               />
             </Col>
-            <Col xs={24} sm={18} md={18} className='flex items-center gap-2 justify-end'>
+            <Col xs={24} sm={10} md={10} className='flex items-center gap-2 justify-end'>
               <RangePicker value={dates} onChange={val => setDates(val)} allowClear={false} />
-              <Button type='primary' icon={<SearchOutlined />} onClick={fetchPurchaseReport}>
+              <Button type='primary' icon={<SearchOutlined />} onClick={fetchOrdersReport}>
                 Filter
               </Button>
             </Col>
@@ -228,7 +236,7 @@ const PurchaseReportPage = () => {
             dataSource={data.list}
             columns={columns}
             rowKey='id'
-            pagination={{ pageSize: 10, showTotal: total => `Total ${total} purchases` }}
+            pagination={{ pageSize: 10, showTotal: total => `Total ${total} orders` }}
           />
         </Card>
       </Spin>
@@ -236,4 +244,4 @@ const PurchaseReportPage = () => {
   );
 };
 
-export default PurchaseReportPage;
+export default OrderReportPage;

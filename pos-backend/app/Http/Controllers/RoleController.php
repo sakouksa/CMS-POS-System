@@ -21,7 +21,7 @@ class RoleController extends Controller implements HasMiddleware
             new Middleware('permission:role.view', only: ['index']),
             new Middleware('permission:role.view_single', only: ['show']),
             new Middleware('permission:role.create', only: ['store']),
-            new Middleware('permission:role.edit', only: ['update']),
+            new Middleware('permission:role.update', only: ['update']),
             new Middleware('permission:role.delete', only: ['destroy']),
         ];
     }
@@ -29,17 +29,17 @@ class RoleController extends Controller implements HasMiddleware
     // Display a listing of the resource.
     public function index(Request $req)
     {
-        $role = Role::query(); //ORM eloquent
+        $role = Role::with('permissions');
         if ($req->has("text_search")) {
-            // $role->where("name", "=", $req->input("text_search")); // ទាល់តែដូចគ្នាបាន search filter ចេញ
-            $role->where("name", "LIKE", "%" . $req->input("text_search") . "%"); //Function នេះ ស្រដៀងក៌វា search filter ចេញដែលគេប្រើ "LIKE"
-        };
+            $role->where("name", "LIKE", "%" . $req->input("text_search") . "%");
+        }
         if ($req->has("status")) {
             $role->where("status", "=", $req->input("status"));
         }
         $list = $role->orderBy('id', 'desc')->get();
         return response()->json([
             'list' => $list,
+            'permissions' => \App\Models\Permission::all(),
         ]);
     }
 
@@ -47,8 +47,11 @@ class RoleController extends Controller implements HasMiddleware
     public function store(RoleRequest $request)
     {
         $role = Role::create($request->validated());
+        if ($request->has('permissions')) {
+            $role->permissions()->sync($request->input('permissions'));
+        }
         return response()->json([
-            'data' => $role,
+            'data' => $role->load('permissions'),
             'message' => 'បានបង្កើតតួនាទីថ្មីដោយជោគជ័យ',
         ], 200);
     }
@@ -56,7 +59,11 @@ class RoleController extends Controller implements HasMiddleware
     // Display the specified resource.
     public function show(string $id)
     {
-        return Role::find($id);
+        $role = Role::with('permissions')->find($id);
+        if (!$role) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+        return response()->json(['data' => $role]);
     }
 
     // Update the specified resource in storage.
@@ -64,9 +71,12 @@ class RoleController extends Controller implements HasMiddleware
     {
         $role = Role::findOrFail($id);
         $role->update($request->validated());
+        if ($request->has('permissions')) {
+            $role->permissions()->sync($request->input('permissions'));
+        }
 
         return response()->json([
-            'data' => $role,
+            'data' => $role->load('permissions'),
             'message' => 'បានកែប្រែទិន្នន័យដោយជោគជ័យ',
         ]);
     }

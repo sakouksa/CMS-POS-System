@@ -13,7 +13,8 @@ class Product extends Model
      * Always include computed fields in API response
      */
     protected $appends = [
-        'final_price'
+        'final_price',
+        'stock_quantity'
     ];
 
     protected $fillable = [
@@ -27,6 +28,7 @@ class Product extends Model
         'cost_price',
         'price',
         'discount_percent',
+        'quantity',
         'stock_quantity',
         'min_stock_alert',
         'weight',
@@ -45,6 +47,7 @@ class Product extends Model
         'cost_price' => 'float',
         'discount_percent' => 'integer',
 
+        'quantity' => 'integer',
         'stock_quantity' => 'integer',
         'min_stock_alert' => 'integer',
         'weight' => 'float',
@@ -77,6 +80,11 @@ class Product extends Model
         }
 
         return $price;
+    }
+
+    public function getStockQuantityAttribute()
+    {
+        return $this->quantity ?? 0;
     }
 
     /**
